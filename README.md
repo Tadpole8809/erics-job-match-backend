@@ -4,11 +4,21 @@ Backend for Eric's Job Match app: FastAPI, a job fetcher (SerpApi / JSearch), a 
 
 The frontend (a web app / PWA for MacBook and iPhone) talks to this server over HTTP with JSON. See [GEMINI.md](GEMINI.md) for project rules.
 
+## Requirements
+
+**Python 3.10 or newer** (3.12 recommended). Check with `python3 --version`.
+
+Macs come with Python 3.9, which is too old. Install 3.12 first, using either:
+
+- the macOS installer from https://www.python.org/downloads/, or
+- Homebrew: `brew install python@3.12`
+
 ## Setup (Mac)
 
 ```bash
-python3 -m venv .venv
+python3.12 -m venv .venv      # use 3.12 here, not the built-in python3
 source .venv/bin/activate
+python --version              # should say 3.12.x
 pip install -r requirements.txt
 cp .env.example .env        # then open .env and add your API keys
 uvicorn app.main:app --reload

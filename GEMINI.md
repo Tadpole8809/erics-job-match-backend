@@ -24,6 +24,7 @@ This repo is the backend for Eric's Job Match app. Eric will continue developmen
 - Small, focused commits. Explain what changed in plain language.
 
 ## Local dev
+- Needs Python 3.10+ (3.12 recommended). macOS ships 3.9, which is too old: install 3.12 and use python3.12 -m venv .venv
 - python -m venv .venv, activate it, pip install -r requirements.txt
 - Copy .env.example to .env and fill in keys
 - Run: uvicorn app.main:app --reload
