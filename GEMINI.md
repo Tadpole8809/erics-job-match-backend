@@ -6,7 +6,8 @@ This repo is the backend for Eric's Job Match app. Eric will continue developmen
 - Acer Predator (backend): Python fetcher + normalizer, Gemini API match scorer, FastAPI REST server, local SQLite database
 - MacBook Air & iPhone (frontend): Responsive web app / PWA in app/static/ (plain HTML/CSS/JS, no build step), served by this same server at /, saved to iPhone Home Screen, talks to the API over HTTP / JSON
 - Passcode: if APP_PASSCODE is set in .env, every API call needs the X-App-Passcode header (app/auth.py). The app asks once and remembers it
-- Hosting: Render, configured in render.yaml (persistent disk at /var/data for SQLite). Pushes to main redeploy automatically. Secrets are set in Render's dashboard, never in the repo
+- Where it runs: locally on Eric's MacBook (uvicorn app.main:app --reload). The iPhone reaches it over the same Wi-Fi. It is NOT hosted online right now
+- render.yaml is an optional, unused config for hosting on Render later (persistent disk for SQLite, secrets set in Render's dashboard). Don't assume it's deployed
 - Job APIs: SerpApi / JSearch
 - Single user: Eric only. Open experience — match depends on his resume / profile.
 

@@ -44,12 +44,14 @@ Then open:
 1. **Set a passcode.** Put a long `APP_PASSCODE` in `.env` before the server can be reached from anywhere but your own computer. The phone asks for it once and remembers it.
 2. **Make the server reachable from the phone.**
    - *Same Wi-Fi (quick test):* run `uvicorn app.main:app --host 0.0.0.0 --port 8000` and open the computer's local IP on the phone, for example `http://192.168.1.20:8000`.
-   - *From anywhere:* put it online with Render. See "Put it online (Render)" below.
+   - *From anywhere (optional, not set up):* the server would have to be hosted online. See "Put it online (Render), optional" below.
 3. **Add it to the Home Screen.** In Safari, open the app, tap **Share → Add to Home Screen**, then tap **Add**. It opens full-screen with its own icon, named "Job Match".
 
 Over plain `http://` on Wi-Fi, the app works but can't keep a copy of itself for fast loading. That needs HTTPS, which a cloud host or Tailscale provides.
 
-## Put it online (Render)
+## Put it online (Render), optional
+
+**Not set up right now.** The app runs locally on the Mac. These steps are here in case you want it reachable from anywhere later.
 
 The repo includes [render.yaml](render.yaml), which tells Render how to build and run the app. It also sets up a disk, so the database survives restarts. That needs a paid plan; check Render's current pricing.
 
