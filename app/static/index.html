@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Eric's Job Match</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!--
+    Simple built-in test page for the backend. Plain HTML + JS, no build step.
+    The real frontend (PWA) can replace this; it shows how to call every endpoint.
+  -->
+  <header class="top">
+    <h1>Eric's Job Match</h1>
+    <div id="keys" class="keys" aria-label="API key status"></div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="profile" role="tab">1. Profile</button>
+    <button class="tab" data-tab="search" role="tab">2. Search</button>
+    <button class="tab" data-tab="jobs" role="tab">3. My jobs</button>
+  </nav>
+
+  <main>
+    <!-- ===== Profile ===== -->
+    <section id="tab-profile" class="panel">
+      <div class="card">
+        <h2>Start with the resume</h2>
+        <p class="hint">Upload a PDF or text file, or paste the resume. Gemini reads it and asks a few follow-up questions.</p>
+        <form id="resume-file-form" class="row">
+          <input type="file" id="resume-file" accept=".pdf,.txt,.md" required>
+          <button type="submit">Upload resume</button>
+        </form>
+        <details>
+          <summary>Or paste the text instead</summary>
+          <form id="resume-text-form" class="stack">
+            <textarea id="resume-text" rows="8" placeholder="Paste resume text here..." required></textarea>
+            <button type="submit">Read pasted resume</button>
+          </form>
+        </details>
+      </div>
+
+      <div id="questions-card" class="card" hidden>
+        <h2>A few quick questions</h2>
+        <form id="answers-form" class="stack">
+          <div id="questions"></div>
+          <button type="submit">Save answers</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h2>Profile</h2>
+        <p class="hint">Edit anything here. Use commas between items. Saving clears old match scores.</p>
+        <form id="profile-form" class="stack">
+          <div class="grid">
+            <label>Name <input name="name"></label>
+            <label>Location <input name="location" placeholder="e.g. Austin, TX"></label>
+          </div>
+          <label>Headline <input name="headline" placeholder="e.g. Warehouse lead with 5 years experience"></label>
+          <label>Target roles <input name="target_roles" placeholder="Warehouse Supervisor, Inventory Analyst"></label>
+          <label>Skills <textarea name="skills" rows="2" placeholder="Forklift, Inventory management, Excel"></textarea></label>
+          <label>Preferences <input name="preferences" placeholder="Full-time, On-site OK, $55k+"></label>
+          <div class="grid">
+            <label>Years of experience <input name="years_experience" type="number" min="0" step="0.5"></label>
+            <label>Education <input name="education" placeholder="High school diploma, OSHA 10"></label>
+          </div>
+          <label>Notes <textarea name="notes" rows="2"></textarea></label>
+          <div id="experience" class="experience"></div>
+          <button type="submit">Save profile</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===== Search ===== -->
+    <section id="tab-search" class="panel" hidden>
+      <div class="card">
+        <form id="search-form" class="search">
+          <input id="q" placeholder="Job title or keywords" required>
+          <input id="location" placeholder="Location (optional)">
+          <select id="source" aria-label="Job source">
+            <option value="auto">Any source</option>
+            <option value="jsearch">JSearch</option>
+            <option value="serpapi">Google Jobs (SerpApi)</option>
+          </select>
+          <button type="submit">Search</button>
+        </form>
+        <div id="role-chips" class="chips"></div>
+      </div>
+      <div class="bar" id="search-bar" hidden>
+        <span id="search-count"></span>
+        <button id="score-all" class="secondary">Score all for Eric</button>
+      </div>
+      <div id="search-results" class="results"></div>
+      <button id="load-more" class="secondary wide" hidden>Load more</button>
+    </section>
+
+    <!-- ===== Stored jobs ===== -->
+    <section id="tab-jobs" class="panel" hidden>
+      <div class="card row filters">
+        <input id="jobs-filter" placeholder="Filter by title, company, place">
+        <select id="jobs-sort" aria-label="Sort">
+          <option value="score">Best match first</option>
+          <option value="recent">Newest first</option>
+        </select>
+        <label class="check"><input type="checkbox" id="jobs-saved"> Saved only</label>
+      </div>
+      <div id="jobs-results" class="results"></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -221,3 +221,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Eric's Job Match: local database files
+*.db
+*.db-journal
+*.sqlite
+.DS_Store
