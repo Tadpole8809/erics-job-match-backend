@@ -7,18 +7,61 @@ const LIST_FIELDS = ["target_roles", "skills", "preferences", "education"];
 let currentProfile = null;
 let searchState = { jobs: [], nextToken: null, params: null };
 
+// ---------- passcode ----------
+// The passcode is remembered on this device so Eric only types it once.
+
+const PASSCODE_KEY = "jobmatch-passcode";
+
+function getPasscode() {
+  try { return localStorage.getItem(PASSCODE_KEY) || ""; } catch { return ""; }
+}
+function setPasscode(value) {
+  try {
+    if (value) localStorage.setItem(PASSCODE_KEY, value);
+    else localStorage.removeItem(PASSCODE_KEY);
+  } catch { /* private mode: it just won't be remembered */ }
+}
+
+class LockedError extends Error {}
+
+function showLock(message) {
+  $("#lock").hidden = false;
+  $("#lock-error").hidden = !message;
+  $("#lock-error").textContent = message || "";
+  setTimeout(() => $("#lock-input").focus(), 50);
+}
+
+$("#lock-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  setPasscode($("#lock-input").value.trim());
+  $("#lock-input").value = "";
+  await start();
+});
+
 // ---------- helpers ----------
 
 async function api(method, path, body) {
   const opts = { method, headers: {} };
+  const passcode = getPasscode();
+  if (passcode) opts.headers["X-App-Passcode"] = passcode;
   if (body instanceof FormData) {
     opts.body = body;
   } else if (body !== undefined) {
     opts.headers["Content-Type"] = "application/json";
     opts.body = JSON.stringify(body);
   }
-  const resp = await fetch(path, opts);
+  let resp;
+  try {
+    resp = await fetch(path, opts);
+  } catch {
+    throw new Error("Can't reach the server. Check that it's running and that you're connected.");
+  }
   const data = await resp.json().catch(() => ({}));
+  if (resp.status === 401) {
+    setPasscode("");
+    showLock(passcode ? "That passcode didn't work. Try again." : "");
+    throw new LockedError("Passcode required.");
+  }
   if (!resp.ok) {
     let msg = data.detail || `Request failed (${resp.status})`;
     if (Array.isArray(msg)) msg = msg.map((d) => d.msg).join("; ");
@@ -51,7 +94,7 @@ async function busy(button, label, task) {
   try {
     return await task();
   } catch (err) {
-    toast(err.message, true);
+    if (!(err instanceof LockedError)) toast(err.message, true);
   } finally {
     button.disabled = false;
     button.textContent = original;
@@ -303,7 +346,7 @@ async function loadJobs() {
     storedJobs = await api("GET", `/jobs?${params}`);
     renderStored();
   } catch (err) {
-    toast(err.message, true);
+    if (!(err instanceof LockedError)) toast(err.message, true);
   }
 }
 
@@ -318,5 +361,19 @@ $("#jobs-results").addEventListener("click", (e) => handleJobAction(e, storedJob
 
 // ---------- start ----------
 
-loadHealth();
-api("GET", "/profile").then(fillProfile).catch((err) => toast(err.message, true));
+async function start() {
+  loadHealth();
+  try {
+    fillProfile(await api("GET", "/profile"));
+    $("#lock").hidden = true;
+  } catch (err) {
+    if (!(err instanceof LockedError)) toast(err.message, true);
+  }
+}
+
+start();
+
+// Lets the app open instantly from the Home Screen. Needs HTTPS (or localhost).
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").catch(() => {});
+}

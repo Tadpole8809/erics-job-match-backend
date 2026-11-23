@@ -4,7 +4,9 @@ This repo is the backend for Eric's Job Match app. Eric will continue developmen
 
 ## Architecture
 - Acer Predator (backend): Python fetcher + normalizer, Gemini API match scorer, FastAPI REST server, local SQLite database
-- MacBook Air & iPhone (frontend, later): Responsive web app / PWA, saved to iPhone Home Screen, talks to this backend over HTTP / JSON
+- MacBook Air & iPhone (frontend): Responsive web app / PWA in app/static/ (plain HTML/CSS/JS, no build step), served by this same server at /, saved to iPhone Home Screen, talks to the API over HTTP / JSON
+- Passcode: if APP_PASSCODE is set in .env, every API call needs the X-App-Passcode header (app/auth.py). The app asks once and remembers it
+- Hosting: Render, configured in render.yaml (persistent disk at /var/data for SQLite). Pushes to main redeploy automatically. Secrets are set in Render's dashboard, never in the repo
 - Job APIs: SerpApi / JSearch
 - Single user: Eric only. Open experience — match depends on his resume / profile.
 
@@ -14,10 +16,11 @@ This repo is the backend for Eric's Job Match app. Eric will continue developmen
 - app/scorer.py — Gemini API match scorer (profile/resume vs job)
 - app/db.py — SQLite: jobs, profile, matches, saved_jobs
 - app/models.py — Pydantic models
+- app/static/ — the phone app: index.html, style.css, app.js, sw.js (service worker), manifest.webmanifest, icons/. When changing style.css or app.js, bump ?v= in index.html and CACHE in sw.js
 - requirements.txt, .env.example (never commit .env or API keys)
 
 ## Rules for Gemini
-- Never hardcode API keys. Use environment variables from .env: SERPAPI_KEY, JSEARCH_KEY, GEMINI_API_KEY
+- Never hardcode API keys or the passcode. Use environment variables from .env: SERPAPI_KEY, JSEARCH_KEY, GEMINI_API_KEY, APP_PASSCODE
 - Never commit .env, *.db, or __pycache__
 - Profile flow: scan Eric's resume first, extract roles/skills/experience, then ask follow-up questions to fill gaps — do not make him fill a long form blind
 - Keep endpoints JSON-only, with CORS enabled for the frontend
@@ -28,4 +31,4 @@ This repo is the backend for Eric's Job Match app. Eric will continue developmen
 - python -m venv .venv, activate it, pip install -r requirements.txt
 - Copy .env.example to .env and fill in keys
 - Run: uvicorn app.main:app --reload
-- API docs at http://127.0.0.1:8000/docs
+- App at http://127.0.0.1:8000/ and API docs at http://127.0.0.1:8000/docs

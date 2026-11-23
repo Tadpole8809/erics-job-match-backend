@@ -1,0 +1,41 @@
+# Render deploy settings ("Blueprint"). Render reads this file when you create
+# the service from the GitHub repo: https://dashboard.render.com/blueprints
+#
+# Secrets (API keys, passcode) are NOT in this file. Render asks for them when
+# you create the service, and you can change them later under Environment.
+
+services:
+  - type: web
+    name: erics-job-match
+    runtime: python
+    # A paid plan is needed for the disk below. Without a disk, the database
+    # (profile, jobs, scores) would be wiped on every restart or deploy.
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    # --proxy-headers (with FORWARDED_ALLOW_IPS below) lets the passcode lockout
+    # see each visitor's real address instead of Render's proxy.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers
+    healthCheckPath: /health
+    autoDeploy: true  # every push to main redeploys automatically
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: DB_PATH
+        value: /var/data/jobmatch.db
+      - key: REQUIRE_PASSCODE
+        value: "true"
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"
+      # Render asks for these when you create the service:
+      - key: APP_PASSCODE
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: JSEARCH_KEY
+        sync: false
+      - key: SERPAPI_KEY
+        sync: false

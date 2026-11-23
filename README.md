@@ -1,8 +1,8 @@
 # erics-job-match-backend
 
-Backend for Eric's Job Match app: FastAPI, a job fetcher (SerpApi / JSearch), a Gemini match scorer, and SQLite.
+Eric's Job Match: upload a resume, search jobs, and see which ones fit best. It's a FastAPI server with a job fetcher (SerpApi / JSearch), a Gemini match scorer, and SQLite, plus a phone app (PWA) that installs to the iPhone Home Screen.
 
-The frontend (a web app / PWA for MacBook and iPhone) talks to this server over HTTP with JSON. See [GEMINI.md](GEMINI.md) for project rules.
+The server hosts the app itself at `/`, so there's only one thing to run. See [GEMINI.md](GEMINI.md) for project rules.
 
 ## Requirements
 
@@ -36,10 +36,32 @@ uvicorn app.main:app --reload
 
 Then open:
 
-- **http://127.0.0.1:8000/** is a simple built-in test page with forms for the whole flow: resume, follow-up questions, profile editing, search, scoring and saving. It's plain HTML and JS in `app/static/` and shows how to call every endpoint. The real frontend can copy it or replace it.
-- **http://127.0.0.1:8000/docs** lists every endpoint, with example inputs you can try.
+- **http://127.0.0.1:8000/** is the app: Profile (resume and follow-up questions), Search, and My jobs (scores and saved jobs). It's plain HTML, CSS and JS in `app/static/`, with no build step.
+- **http://127.0.0.1:8000/docs** lists every API endpoint, with example inputs you can try.
 
-To reach the server from an iPhone on the same Wi-Fi, run `uvicorn app.main:app --host 0.0.0.0 --port 8000` and use the computer's local IP address, for example `http://192.168.1.20:8000`.
+## Using it on the iPhone
+
+1. **Set a passcode.** Put a long `APP_PASSCODE` in `.env` before the server can be reached from anywhere but your own computer. The phone asks for it once and remembers it.
+2. **Make the server reachable from the phone.**
+   - *Same Wi-Fi (quick test):* run `uvicorn app.main:app --host 0.0.0.0 --port 8000` and open the computer's local IP on the phone, for example `http://192.168.1.20:8000`.
+   - *From anywhere:* put it online with Render. See "Put it online (Render)" below.
+3. **Add it to the Home Screen.** In Safari, open the app, tap **Share → Add to Home Screen**, then tap **Add**. It opens full-screen with its own icon, named "Job Match".
+
+Over plain `http://` on Wi-Fi, the app works but can't keep a copy of itself for fast loading. That needs HTTPS, which a cloud host or Tailscale provides.
+
+## Put it online (Render)
+
+The repo includes [render.yaml](render.yaml), which tells Render how to build and run the app. It also sets up a disk, so the database survives restarts. That needs a paid plan; check Render's current pricing.
+
+1. Sign in at https://dashboard.render.com with GitHub.
+2. Click **New → Blueprint** and pick the `erics-job-match-backend` repo.
+3. Render asks for the secret settings. Fill them in:
+   - `APP_PASSCODE`: a long passcode, 8 characters or more. The server won't start without one.
+   - `GEMINI_API_KEY`, plus `JSEARCH_KEY` and/or `SERPAPI_KEY`. Leave a box empty if you don't use that API.
+4. Click **Apply**. The first build takes a few minutes. When it's done, Render shows the app's address, something like `https://erics-job-match.onrender.com`.
+5. Open that address on the iPhone in Safari, enter the passcode, then tap **Share → Add to Home Screen**.
+
+After that, every push to `main` redeploys automatically. To change a key or the passcode, go to the service's **Environment** page in Render and save. Render restarts the server for you.
 
 ## API keys (.env)
 
@@ -48,6 +70,7 @@ To reach the server from an iPhone on the same Wi-Fi, run `uvicorn app.main:app 
 | `SERPAPI_KEY` | Google Jobs search via SerpApi | One of these two |
 | `JSEARCH_KEY` | JSearch on RapidAPI | One of these two |
 | `GEMINI_API_KEY` | Reading the resume, follow-up questions, AI match scores | Strongly recommended |
+| `APP_PASSCODE` | Locks the app and API behind a passcode | Yes, if the server can be reached from outside your computer |
 
 Without a Gemini key, `/match` still works but gives a rough keyword score (`"method": "keyword"`), and the resume endpoints return an error.
 
@@ -81,6 +104,8 @@ Changing the profile clears the old scores, because they were based on the old p
 
 Errors come back as `{"detail": "plain-language message"}` with status 400 (bad input), 404 (not found), or 502 (a job API or Gemini failed).
 
+When `APP_PASSCODE` is set, every endpoint except `/health` needs an `X-App-Passcode` header. Without it, or with the wrong one, you get 401. After 10 wrong tries from the same address, you get 429 for 15 minutes. On the `/docs` page, click **Authorize** and enter the passcode.
+
 ## Project layout
 
 ```
@@ -92,7 +117,10 @@ app/
   gemini.py    Small Gemini API wrapper (returns JSON)
   db.py        SQLite: jobs, profile, matches, saved_jobs
   models.py    Pydantic models (the JSON shapes)
+  auth.py      Passcode check (APP_PASSCODE)
   config.py    Reads settings from .env
+  static/      The phone app: index.html, style.css, app.js,
+               sw.js (service worker), manifest.webmanifest, icons/
 tests/         pytest tests (no API keys needed)
 ```
 

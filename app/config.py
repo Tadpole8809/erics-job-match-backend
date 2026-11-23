@@ -34,6 +34,16 @@ def db_path() -> str:
     return _get("DB_PATH", "jobmatch.db")
 
 
+def app_passcode() -> str:
+    """If set, the app and API require this passcode. Empty = no passcode."""
+    return _get("APP_PASSCODE")
+
+
+def passcode_mandatory() -> bool:
+    """True on the online server (REQUIRE_PASSCODE=true): refuse to start without a passcode."""
+    return _get("REQUIRE_PASSCODE").lower() in ("1", "true", "yes")
+
+
 def cors_origins() -> list[str]:
     """Comma-separated list of allowed frontend origins. '*' allows all."""
     raw = _get("CORS_ORIGINS", "*")

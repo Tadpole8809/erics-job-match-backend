@@ -36,7 +36,7 @@ SERPAPI_SAMPLE = {
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     monkeypatch.setenv("DB_PATH", str(tmp_path / "test.db"))
-    for key in ("SERPAPI_KEY", "JSEARCH_KEY", "GEMINI_API_KEY"):
+    for key in ("SERPAPI_KEY", "JSEARCH_KEY", "GEMINI_API_KEY", "APP_PASSCODE", "REQUIRE_PASSCODE"):
         monkeypatch.setenv(key, "")
     with TestClient(main.app) as c:
         yield c
@@ -54,15 +54,58 @@ def fake_search(monkeypatch):
 def test_health(client):
     body = client.get("/health").json()
     assert body["ok"] is True
+    assert body["passcode_required"] is False
     assert body["keys"] == {"serpapi": False, "jsearch": False, "gemini": False}
 
 
-def test_test_page_is_served(client):
+def test_app_files_are_served(client):
     resp = client.get("/")
     assert resp.status_code == 200
     assert "Eric's Job Match" in resp.text
-    assert client.get("/static/app.js").status_code == 200
-    assert client.get("/static/style.css").status_code == 200
+    for path in ("/static/app.js", "/static/style.css", "/static/icons/apple-touch-icon.png", "/sw.js"):
+        assert client.get(path).status_code == 200, path
+    manifest = client.get("/manifest.webmanifest").json()
+    assert manifest["display"] == "standalone"
+
+
+def test_passcode(client, monkeypatch):
+    from app import auth
+
+    monkeypatch.setenv("APP_PASSCODE", "open-sesame")
+    monkeypatch.setattr(auth, "_failures", auth.defaultdict(auth.deque))
+
+    # The app shell and health check stay open so the passcode screen can load.
+    assert client.get("/").status_code == 200
+    assert client.get("/health").json()["passcode_required"] is True
+
+    assert client.get("/profile").status_code == 401
+    assert client.get("/profile", headers={"X-App-Passcode": "wrong"}).json()["detail"] == "Wrong passcode."
+    assert client.get("/profile", headers={"X-App-Passcode": "open-sesame"}).status_code == 200
+    assert client.post("/saved/abc", headers={"X-App-Passcode": "nope"}).status_code == 401
+
+
+def test_refuses_to_start_online_without_passcode(tmp_path, monkeypatch):
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "test.db"))
+    monkeypatch.setenv("REQUIRE_PASSCODE", "true")
+    monkeypatch.setenv("APP_PASSCODE", "")
+    with pytest.raises(RuntimeError, match="APP_PASSCODE"):
+        with TestClient(main.app):
+            pass
+
+    monkeypatch.setenv("APP_PASSCODE", "long-enough-passcode")
+    with TestClient(main.app) as c:
+        assert c.get("/health").json()["passcode_required"] is True
+
+
+def test_passcode_lockout(client, monkeypatch):
+    from app import auth
+
+    monkeypatch.setenv("APP_PASSCODE", "open-sesame")
+    monkeypatch.setattr(auth, "_failures", auth.defaultdict(auth.deque))
+    for _ in range(auth.MAX_FAILURES):
+        client.get("/jobs", headers={"X-App-Passcode": "guess"})
+    # Even the right passcode is refused while locked out.
+    assert client.get("/jobs", headers={"X-App-Passcode": "open-sesame"}).status_code == 429
 
 
 def test_normalizers():

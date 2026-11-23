@@ -7,12 +7,13 @@ API docs:  http://127.0.0.1:8000/docs   (try every endpoint from the browser)
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import config, db, fetcher, gemini, profile as profile_flow, scorer
+from app.auth import require_passcode
 from app.models import (
     AnswersRequest,
     JobWithMatch,
@@ -31,6 +32,12 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    # Safety net for the online server: never run open to the internet by accident.
+    if config.passcode_mandatory() and len(config.app_passcode()) < 8:
+        raise RuntimeError(
+            "REQUIRE_PASSCODE is on, so APP_PASSCODE must be set (8+ characters). "
+            "Add it in the host's environment settings."
+        )
     db.init_db()
     yield
 
@@ -38,8 +45,10 @@ async def lifespan(_: FastAPI):
 app = FastAPI(
     title="Eric's Job Match API",
     description="Search jobs, build Eric's profile from his resume, and score job matches.",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
+    # Every endpoint checks the passcode (if APP_PASSCODE is set). See app/auth.py.
+    dependencies=[Depends(require_passcode)],
 )
 
 origins = config.cors_origins()
@@ -51,13 +60,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Built-in test page (app/static). The real frontend can live anywhere and call the API.
+# The phone app (app/static): a PWA that can be added to the iPhone Home Screen.
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.get("/", include_in_schema=False)
 def home() -> FileResponse:
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(STATIC_DIR / "index.html", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/manifest.webmanifest", include_in_schema=False)
+def manifest() -> FileResponse:
+    return FileResponse(STATIC_DIR / "manifest.webmanifest", media_type="application/manifest+json")
+
+
+@app.get("/sw.js", include_in_schema=False)
+def service_worker() -> FileResponse:
+    # Served from the root so it can manage the whole app; never cached by the browser.
+    return FileResponse(
+        STATIC_DIR / "sw.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"}
+    )
 
 
 def _require_job(job_id: str) -> JobWithMatch:
@@ -74,6 +96,7 @@ def health() -> dict:
     """Quick check that the server is up, and which API keys are configured."""
     return {
         "ok": True,
+        "passcode_required": bool(config.app_passcode()),
         "keys": {
             "serpapi": bool(config.serpapi_key()),
             "jsearch": bool(config.jsearch_key()),

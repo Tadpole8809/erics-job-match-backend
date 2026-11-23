@@ -2,15 +2,42 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Eric's Job Match</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <meta name="description" content="Find jobs that match Eric's resume.">
+
+  <!-- Installable app (PWA): Home Screen name, icon and colors -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Job Match">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#11151b" media="(prefers-color-scheme: dark)">
+
+  <!-- Bump ?v= when style.css or app.js change (and CACHE in sw.js), so phones load the new version. -->
+  <link rel="stylesheet" href="/static/style.css?v=3">
 </head>
 <body>
   <!--
-    Simple built-in test page for the backend. Plain HTML + JS, no build step.
-    The real frontend (PWA) can replace this; it shows how to call every endpoint.
+    Eric's Job Match phone app. Plain HTML + JS, no build step.
+    Add it to the iPhone Home Screen from Safari: Share -> Add to Home Screen.
   -->
+
+  <!-- Passcode screen: shown only when the server has APP_PASSCODE set -->
+  <div id="lock" class="lock" hidden>
+    <form id="lock-form" class="lock-card">
+      <img src="/static/icons/icon-192.png" alt="" width="64" height="64">
+      <h1>Eric's Job Match</h1>
+      <p class="hint">Enter the passcode to continue.</p>
+      <input id="lock-input" type="password" autocomplete="current-password" placeholder="Passcode" required>
+      <p id="lock-error" class="lock-error" hidden></p>
+      <button type="submit">Unlock</button>
+    </form>
+  </div>
+
   <header class="top">
     <h1>Eric's Job Match</h1>
     <div id="keys" class="keys" aria-label="API key status"></div>
@@ -110,6 +137,6 @@
   </main>
 
   <div id="toast" class="toast" role="status" hidden></div>
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=3"></script>
 </body>
 </html>
